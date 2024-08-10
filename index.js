@@ -10,20 +10,15 @@ import wisp from "wisp-server-node";
 const app = express();
 const server = createServer();
 
-// Serve static files from the publicPath
-app.use(express.static(publicPath));
+// Serve your custom homepage and static files
+app.use(express.static(join(process.cwd(), 'public')));
 
 // Serve Ultraviolet and related assets
 app.use("/uv/", express.static(uvPath));
 app.use("/epoxy/", express.static(epoxyPath));
 app.use("/baremux/", express.static(baremuxPath));
 
-// Serve your custom homepage
-app.get('/', (req, res) => {
-  res.sendFile(join(publicPath, "test.html"));
-});
-
-// Serve the 404 page
+// Serve the 404 page if not found
 app.use((req, res) => {
   res.status(404).sendFile(join(publicPath, "404.html"));
 });
