@@ -2,7 +2,6 @@ import express from 'express';
 import path from 'node:path';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import admin from 'firebase-admin';
 import { UV } from '@titaniumnetwork-dev/ultraviolet';
 
 // Load environment variables from .env file for local development
@@ -10,19 +9,6 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
-
-// Initialize Firebase Admin
-if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL
-    })
-  });
-}
-
-const db = admin ? admin.firestore() : null;
 
 // Middleware
 app.use(cors());
