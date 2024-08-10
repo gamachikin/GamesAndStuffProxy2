@@ -1,82 +1,134 @@
-import { createBareServer } from '@tomphttp/bare-server-node';
-import express from "express";
-import { createServer } from "node:http";
-import { uvPath } from "@titaniumnetwork-dev/ultraviolet";
-import { join } from "node:path";
-import { hostname } from "node:os";
-import { fileURLToPath } from "url";
+import express from 'express';
+import path from 'node:path';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import admin from 'firebase-admin';
+import { UV } from '@titaniumnetwork-dev/ultraviolet';
 
-const publicPath = fileURLToPath(new URL("./public/", import.meta.url));
+// Load environment variables from .env file for local development
+dotenv.config();
 
-const bare = createBareServer("/bare/");
 const app = express();
+const PORT = process.env.PORT || 8080;
 
-app.use(express.static(publicPath));
-app.use("/uv/", express.static(uvPath));
-
-const routes = [
-    { path: '/apps', file: 'apps.html' },
-    { path: '/games', file: 'games.html' },
-    { path: '/settings', file: 'settings.html' },
-    { path: '/', file: 'index.html' },
-    { path: '/search', file: 'search.html' },
-  ]
-
-// Error for everything else
-app.use((req, res) => {
-  res.status(404); 
-  res.sendFile(join(publicPath, "404.html"));
-});
-
-const server = createServer();
-
-server.on("request", (req, res) => {
-  if (bare.shouldRoute(req)) {
-    bare.routeRequest(req, res);
-  } else {
-    app(req, res);
-  }
-});
-
-server.on("upgrade", (req, socket, head) => {
-  if (bare.shouldRoute(req)) {
-    bare.routeUpgrade(req, socket, head);
-  } else {
-    socket.end();
-  }
-});
-
-let port = parseInt(process.env.PORT || "");
-
-if (isNaN(port)) port = 3000;
-
-server.on("listening", () => {
-  const address = server.address();
-
-  // by default we are listening on 0.0.0.0 (every interface)
-  // we just need to list a few
-  console.log("Listening on:");
-  console.log(`\thttp://localhost:${address.port}`);
-  console.log(`\thttp://${hostname()}:${address.port}`);
-  console.log(
-    `\thttp://${
-      address.family === "IPv6" ? `[${address.address}]` : address.address
-    }:${address.port}`
-  );
-});
-
-// https://expressjs.com/en/advanced/healthcheck-graceful-shutdown.html
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
-
-function shutdown() {
-  console.log("SIGTERM signal received: closing HTTP server");
-  server.close();
-  bare.close();
-  process.exit(0);
+// Initialize Firebase Admin
+if (process.env.FIREBASE_PROJECT_ID && process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL
+    })
+  });
 }
 
-server.listen({
-  port,
+const db = admin ? admin.firestore() : null;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(process.cwd(), 'static')));
+
+// Ultraviolet Proxy Setup
+const uv = new UV({
+  prefix: '/service/', // The prefix used to distinguish proxy URLs
+  bare: '/bare/',      // Path to bare server (for tunneling)
+  encodeUrl: UV.codec.xor.encode, // URL encoding method
+  decodeUrl: UV.codec.xor.decode, // URL decoding method
+  handler: '/uv.handler.js',      // Proxy handler script
+  bundle: '/uv.bundle.js',        // Bundled proxy script
+  config: '/uv.config.js',        // Proxy configuration
+  sw: '/uv.sw.js',                // Service worker script
 });
-  
+
+// Use Ultraviolet as middleware for handling proxy requests
+app.use(uv.prefix, uv.app());
+
+// Basic routes
+const routes = [
+  { path: '/', file: 'index.html' },
+  { path: '/apps', file: 'apps.html' },
+  { path: '/games', file: 'games.html' },
+  { path: '/chat', file: 'chat.html' },
+  { path: '/settings', file: 'settings.html' },
+  { path: '/canvas', file: 'canvas.html' },
+];
+
+// Serve static files
+routes.forEach((route) => {
+  app.get(route.path, (req, res) => {
+    res.sendFile(path.join(process.cwd(), 'static', route.file));
+  });
+});
+
+// Rating submission endpoint
+app.post('/api/rateGame', async (req, res) => {
+  if (!db) {
+    return res.status(500).json({ message: 'Database not initialized' });
+  }
+
+  const { gameName, rating } = req.body;
+
+  if (!gameName || !rating || rating < 1 || rating > 5) {
+    return res.status(400).json({ message: 'Invalid request' });
+  }
+
+  try {
+    const gameRef = db.collection('games').doc(gameName);
+    const gameDoc = await gameRef.get();
+
+    if (!gameDoc.exists) {
+      await gameRef.set({ totalRating: rating, numberOfRatings: 1 });
+    } else {
+      const gameData = gameDoc.data();
+      const newTotalRating = gameData.totalRating + rating;
+      const newNumberOfRatings = gameData.numberOfRatings + 1;
+      await gameRef.update({ totalRating: newTotalRating, numberOfRatings: newNumberOfRatings });
+    }
+
+    res.status(200).json({ message: 'Rating submitted' });
+  } catch (error) {
+    console.error('Error updating rating:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Rating statistics endpoint
+app.get('/api/getGameRating/:gameName', async (req, res) => {
+  const { gameName } = req.params;
+
+  if (!gameName) {
+    return res.status(400).json({ message: 'Invalid request' });
+  }
+
+  try {
+    const gameRef = db.collection('games').doc(gameName);
+    const gameDoc = await gameRef.get();
+
+    if (!gameDoc.exists) {
+      return res.status(404).json({ message: 'Game not found' });
+    }
+
+    const gameData = gameDoc.data();
+    const averageRating = gameData.totalRating / gameData.numberOfRatings;
+
+    res.status(200).json({
+      numberOfRatings: gameData.numberOfRatings,
+      averageRating: averageRating.toFixed(1)  // Round to 1 decimal place
+    });
+  } catch (error) {
+    console.error('Error retrieving rating statistics:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Middleware to handle 404 errors
+app.use((req, res) => {
+  res.status(404).sendFile(path.join(process.cwd(), 'static', '404.html'));
+});
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server is running at http://localhost:${PORT}`);
+});
