@@ -1,25 +1,14 @@
 {
-  "name": "Games And Stuff",
-  "version": "4.0.0",
-  "description": "A pretty cool game site",
-  "type": "module",
-  "engines": {
-    "npm": ">=7.0.0",
-    "node": ">=16.0.0"
-  },
+  "name": "gamesandstuffproxy",
+  "version": "1.0.0",
+  "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
+    "start": "node index.js"
   },
-  "author": "",
   "dependencies": {
-    "@titaniumnetwork-dev/ultraviolet": "^2.0.0",
-    "@tomphttp/bare-server-node": "^2.0.2",
     "express": "^4.17.1",
-    "serve-static": "^1.14.1"
-  },
-  "devDependencies": {
-    "eslint": "^8.36.0",
-    "prettier": "^2.8.4"
+    "cors": "^2.8.5",
+    "dotenv": "^10.0.0",
+    "@titaniumnetwork-dev/ultraviolet": "^1.0.0"
   }
 }
