@@ -62,67 +62,6 @@ routes.forEach((route) => {
   });
 });
 
-// Rating submission endpoint
-app.post('/api/rateGame', async (req, res) => {
-  if (!db) {
-    return res.status(500).json({ message: 'Database not initialized' });
-  }
-
-  const { gameName, rating } = req.body;
-
-  if (!gameName || !rating || rating < 1 || rating > 5) {
-    return res.status(400).json({ message: 'Invalid request' });
-  }
-
-  try {
-    const gameRef = db.collection('games').doc(gameName);
-    const gameDoc = await gameRef.get();
-
-    if (!gameDoc.exists) {
-      await gameRef.set({ totalRating: rating, numberOfRatings: 1 });
-    } else {
-      const gameData = gameDoc.data();
-      const newTotalRating = gameData.totalRating + rating;
-      const newNumberOfRatings = gameData.numberOfRatings + 1;
-      await gameRef.update({ totalRating: newTotalRating, numberOfRatings: newNumberOfRatings });
-    }
-
-    res.status(200).json({ message: 'Rating submitted' });
-  } catch (error) {
-    console.error('Error updating rating:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// Rating statistics endpoint
-app.get('/api/getGameRating/:gameName', async (req, res) => {
-  const { gameName } = req.params;
-
-  if (!gameName) {
-    return res.status(400).json({ message: 'Invalid request' });
-  }
-
-  try {
-    const gameRef = db.collection('games').doc(gameName);
-    const gameDoc = await gameRef.get();
-
-    if (!gameDoc.exists) {
-      return res.status(404).json({ message: 'Game not found' });
-    }
-
-    const gameData = gameDoc.data();
-    const averageRating = gameData.totalRating / gameData.numberOfRatings;
-
-    res.status(200).json({
-      numberOfRatings: gameData.numberOfRatings,
-      averageRating: averageRating.toFixed(1)  // Round to 1 decimal place
-    });
-  } catch (error) {
-    console.error('Error retrieving rating statistics:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
 // Middleware to handle 404 errors
 app.use((req, res) => {
   res.status(404).sendFile(path.join(process.cwd(), 'static', '404.html'));
