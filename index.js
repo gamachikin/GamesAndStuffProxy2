@@ -1,33 +1,34 @@
 import express from "express";
 import { createServer } from "node:http";
+import { join } from "node:path";
 import { publicPath } from "ultraviolet-static";
 import { uvPath } from "@titaniumnetwork-dev/ultraviolet";
 import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
 import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
-import { join } from "node:path";
-import { hostname } from "node:os";
 import wisp from "wisp-server-node";
 
 const app = express();
 const server = createServer();
 
-// Load our publicPath first and prioritize it over UV.
+// Serve static files from the publicPath
 app.use(express.static(publicPath));
-// Load vendor files last.
+
+// Serve Ultraviolet and related assets
 app.use("/uv/", express.static(uvPath));
 app.use("/epoxy/", express.static(epoxyPath));
 app.use("/baremux/", express.static(baremuxPath));
 
-// Serve the static HTML file
+// Serve your custom homepage
 app.get('/', (req, res) => {
   res.sendFile(join(publicPath, "test.html"));
 });
 
-// Handle 404 errors
+// Serve the 404 page
 app.use((req, res) => {
   res.status(404).sendFile(join(publicPath, "404.html"));
 });
 
+// Set up WebSocket routing
 server.on("request", (req, res) => {
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
   res.setHeader("Cross-Origin-Embedder-Policy", "require-corp");
@@ -42,8 +43,8 @@ server.on("upgrade", (req, socket, head) => {
   }
 });
 
+// Start server on the specified port
 let port = parseInt(process.env.PORT || "", 10);
-
 if (isNaN(port)) port = 8080;
 
 server.on("listening", () => {
