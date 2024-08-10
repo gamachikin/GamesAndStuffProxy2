@@ -2,8 +2,8 @@ import express from 'express';
 import path from 'node:path';
 import cors from 'cors';
 import dotenv from 'dotenv';
-// Use default import for CommonJS module
-import UV from '@titaniumnetwork-dev/ultraviolet';
+// Use require for CommonJS module
+const UV = require('@titaniumnetwork-dev/ultraviolet');
 
 dotenv.config();
 
