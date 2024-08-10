@@ -2,10 +2,9 @@ import express from 'express';
 import path from 'node:path';
 import cors from 'cors';
 import dotenv from 'dotenv';
-// Use default import for CommonJS module
 import UV from '@titaniumnetwork-dev/ultraviolet';
 
-// Load environment variables from .env file for local development
+// Load environment variables
 dotenv.config();
 
 const app = express();
@@ -19,14 +18,12 @@ app.use(express.static(path.join(process.cwd(), 'static')));
 
 // Ultraviolet Proxy Setup
 const uv = new UV({
-  prefix: '/service/', // The prefix used to distinguish proxy URLs
-  bare: '/bare/',      // Path to bare server (for tunneling)
-  encodeUrl: UV.codec.xor.encode, // URL encoding method
-  decodeUrl: UV.codec.xor.decode, // URL decoding method
-  handler: '/uv.handler.js',      // Proxy handler script
-  bundle: '/uv.bundle.js',        // Bundled proxy script
-  config: '/uv.config.js',        // Proxy configuration
-  sw: '/uv.sw.js',                // Service worker script
+  prefix: process.env.UV_PREFIX || '/service/',
+  bare: process.env.UV_BARE || '/bare/',
+  handler: process.env.UV_HANDLER || '/public/uv.handler.js',
+  bundle: process.env.UV_BUNDLE || '/public/uv.bundle.js',
+  config: process.env.UV_CONFIG || '/public/uv.config.js',
+  sw: process.env.UV_SW || '/public/uv.sw.js',
 });
 
 // Use Ultraviolet as middleware for handling proxy requests
