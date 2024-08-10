@@ -2,7 +2,9 @@ import express from 'express';
 import path from 'node:path';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { UV } from '@titaniumnetwork-dev/ultraviolet';
+import pkg from '@titaniumnetwork-dev/ultraviolet';
+
+const { UV } = pkg; // Use default import syntax
 
 // Load environment variables
 dotenv.config();
