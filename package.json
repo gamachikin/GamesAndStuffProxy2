@@ -10,12 +10,14 @@
   "scripts": {
     "start": "node index.js"
   },
-  "author": "",
   "dependencies": {
-    "@titaniumnetwork-dev/ultraviolet": "^3.2.7",
-    "@tomphttp/bare-server-node": "^2.0.2",
-    "express": "^4.19.2",
-    "@mercuryworkshop/bare-mux": "^2.0.4"
+    "@mercuryworkshop/bare-mux": "^2.0.4",
+    "@mercuryworkshop/epoxy-transport": "^2.1.5",
+    "@titaniumnetwork-dev/ultraviolet": "^3.2.6",
+    "express": "^4.18.2",
+    "ultraviolet-static": "github:titaniumnetwork-dev/Ultraviolet-Static",
+    "wisp-server-node": "^1.1.3",
+    "ws": "^8.17.1"
   },
   "devDependencies": {
     "eslint": "^8.36.0",
