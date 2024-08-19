@@ -1,65 +1,91 @@
-import { ChemicalServer } from "chemicaljs";
-import { fileURLToPath } from "url";
-import { dirname } from "path";
+import { createBareServer } from '@tomphttp/bare-server-node';
 import express from "express";
-import compression from "compression";
-import cheerio from "cheerio";
+import { createServer } from "node:http";
+import { uvPath } from "@titaniumnetwork-dev/ultraviolet";
+import { join } from "node:path";
+import { hostname } from "node:os";
+import { fileURLToPath } from "url";
+import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
+import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
+import { BareMuxConnection } from "@mercuryworkshop/bare-mux"
+let connection = new BareMuxConnection("/baremux/worker.js")
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const chemical = new ChemicalServer();
-const port = process.env.PORT || 8080;
-const version = process.env.npm_package_version;
 const publicPath = fileURLToPath(new URL("./public/", import.meta.url));
 
-chemical.use(compression());
+const bare = createBareServer("/bare/");
+const app = express();
 
-chemical.app.use(
-  express.static(publicPath, {
-    extensions: ["html"],
-    maxAge: 604800000,
-  })
-);
+app.use(express.static(publicPath));
+app.use("/uv/", express.static(uvPath));
+app.use("/epoxy/", express.static(epoxyPath));
+app.use("/baremux/", express.static(baremuxPath));
 
-chemical.app.get("/version", (req, res) => {
-  if (req.query.v && req.query.v !== version) {
-    res.status(400).send(version);
-    return;
+await connection.setTransport("/epoxy/index.mjs", [{ wisp: "wss://wisp.mercurywork.shop/" }]);
+await connection.setTransport("/baremod/index.mjs", ["https://tomp.app/"]);
+
+const routes = [
+    { path: '/apps', file: 'apps.html' },
+    { path: '/games', file: 'games.html' },
+    { path: '/settings', file: 'settings.html' },
+    { path: '/', file: 'index.html' },
+    { path: '/search', file: 'search.html' },
+  ]
+
+// Error for everything else
+app.use((req, res) => {
+  res.status(404); 
+  res.sendFile(join(publicPath, "404.html"));
+});
+
+const server = createServer();
+
+server.on("request", (req, res) => {
+  if (bare.shouldRoute(req)) {
+    bare.routeRequest(req, res);
+  } else {
+    app(req, res);
   }
-  res.status(200).send(version);
 });
 
-chemical.app.get("/get-title", async (req, res) => {
-  const { url } = req.query;
-  try {
-    const response = await fetch(url);
-    const html = await response.text();
-    const title = html.match(/<title>(.*?)<\/title>/i)?.[1] || "Title not found";
-    res.send({ title });
-  } catch {
-    res.status(500).send("Error fetching the URL");
+server.on("upgrade", (req, socket, head) => {
+  if (bare.shouldRoute(req)) {
+    bare.routeUpgrade(req, socket, head);
+  } else {
+    socket.end();
   }
 });
 
-chemical.use("/privacy", express.static(`${publicPath}/privacy.html`));
+let port = parseInt(process.env.PORT || "");
 
-chemical.app.get("/search-api", async (req, res) => {
-  const response = await fetch(`http://api.duckduckgo.com/ac?q=${req.query.term}&format=json`).then((i) => i.json());
-  res.send(response);
+if (isNaN(port)) port = 3000;
+
+server.on("listening", () => {
+  const address = server.address();
+
+  // by default we are listening on 0.0.0.0 (every interface)
+  // we just need to list a few
+  console.log("Listening on:");
+  console.log(`\thttp://localhost:${address.port}`);
+  console.log(`\thttp://${hostname()}:${address.port}`);
+  console.log(
+    `\thttp://${
+      address.family === "IPv6" ? `[${address.address}]` : address.address
+    }:${address.port}`
+  );
 });
 
-chemical.app.get("/user-agents", async (req, res) => {
-  let text = await fetch("https://useragents.me/");
-  text = await text.text();
-  const $ = cheerio.load(text);
-  res.send($("#most-common-desktop-useragents-json-csv > div:eq(0) > textarea").val());
-});
+// https://expressjs.com/en/advanced/healthcheck-graceful-shutdown.html
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
-chemical.error((req, res) => {
-  res.status(404);
-  res.sendFile(`${__dirname}/public/404.html`);
-});
+function shutdown() {
+  console.log("SIGTERM signal received: closing HTTP server");
+  server.close();
+  bare.close();
+  process.exit(0);
+}
 
-chemical.listen(port, () => {
-  console.log(`Fluid listening on port ${port}`);
+server.listen({
+  port,
 });
+  
