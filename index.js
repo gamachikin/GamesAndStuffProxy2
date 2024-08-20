@@ -5,7 +5,8 @@ import { epoxyPath } from "@mercuryworkshop/epoxy-transport";
 import { baremuxPath } from "@mercuryworkshop/bare-mux/node";
 import { join } from "node:path";
 import { hostname } from "node:os";
-import wisp from "wisp-server-node"
+import wisp from "wisp-server-node";
+import { fileURLToPath } from "url";
 
 const publicPath = fileURLToPath(new URL("./public/", import.meta.url));
 
