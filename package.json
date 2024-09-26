@@ -1,25 +1,24 @@
 {
-  "name": "gamesandstuffproxy",
-  "version": "4.0.0",
-  "description": "A pretty cool game site",
+  "name": "fancy-example",
+  "version": "1.0.0",
+  "description": "An advanced example using Chemical components.",
+  "main": "index.js",
   "type": "module",
-  "engines": {
-    "npm": ">=7.0.0",
-    "node": ">=16.0.0"
-  },
   "scripts": {
     "start": "node index.js"
   },
-  "dependencies": {
-    "@mercuryworkshop/bare-mux": "^2.0.4",
-    "@mercuryworkshop/epoxy-transport": "^2.1.5",
-    "@titaniumnetwork-dev/ultraviolet": "^3.2.6",
-    "express": "^4.18.2",
-    "wisp-server-node": "^1.1.3",
-    "ws": "^8.17.1"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chemicaljs/fancy-example.git"
   },
-  "devDependencies": {
-    "eslint": "^8.36.0",
-    "prettier": "^2.8.4"
+  "author": "Nebelung",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/chemicaljs/fancy-example/issues"
+  },
+  "homepage": "https://github.com/chemicaljs/fancy-example#readme",
+  "dependencies": {
+    "chemicaljs": "^1.7.3",
+    "express": "^4.19.2"
   }
 }

@@ -10,8 +10,8 @@
     />
                 <title>Games & Stuff</title>
                     <link rel="stylesheet" href="style.css">
-                    <script src="/uv/uv.bundle.js" charset="UTF-8"></script>
-                    <script src="/uv/uv.config.js"></script>
+                    <script src="/chemical.js"></script>
+                    <script src="/chemical.components.js"></script>
                     <script src="/preload.js"></script>
                     <link href='https://fonts.googleapis.com/css?family=Lato:wght@700' rel='stylesheet' type='text/css'>
   </head>
@@ -31,10 +31,10 @@
                       </nav>
      <div class="center-container style="padding-top: 125px">
       <h1>Games And Stuff Search</h1>
-      <input class="pxyinput" type="text" placeholder="Search The Web..." />
+      <input autofocus spellcheck="false" autocomplete="off" id="search" data-frame="web" class="pxyinput" data-auto-https data-search-engine="https://www.google.com/search?q=%s" placeholder="Search or Enter a URL" is="chemical-input">
     </div>
     <div style="padding-top: 100px">
-    <iframe class="frame"></iframe>
+    <iframe id="web" data-controls="controls" is="chemical-iframe" class="frame"></iframe>
     </div>
   </body>
 
